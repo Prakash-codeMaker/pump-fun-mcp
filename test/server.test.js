@@ -1,0 +1,53 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
+import { handle } from "../lib/server.js";
+
+test("initialize negotiates the protocol version", async () => {
+  const r = await handle({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "t", version: "1" } } });
+  assert.equal(r.result.protocolVersion, "2025-03-26");
+  assert.equal(r.result.serverInfo.name, "pump-fun-mcp");
+  assert.ok(r.result.capabilities.tools);
+  const future = await handle({ jsonrpc: "2.0", id: 2, method: "initialize", params: { protocolVersion: "2099-01-01" } });
+  assert.equal(future.result.protocolVersion, "2025-06-18");
+});
+
+test("tools/list returns six tools with object schemas", async () => {
+  const r = await handle({ jsonrpc: "2.0", id: 3, method: "tools/list" });
+  assert.equal(r.result.tools.length, 6);
+  for (const t of r.result.tools) {
+    assert.equal(t.inputSchema.type, "object");
+    assert.ok(t.description.length > 20);
+  }
+});
+
+test("bad input becomes a tool error the model can read, not a crash", async () => {
+  const r = await handle({ jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "rug_check", arguments: { mint: "not-an-address" } } });
+  assert.equal(r.result.isError, true);
+  assert.match(r.result.content[0].text, /must be a Solana address/);
+});
+
+test("unknown tools and methods are protocol errors; notifications get no reply", async () => {
+  assert.equal((await handle({ jsonrpc: "2.0", id: 5, method: "tools/call", params: { name: "nope" } })).error.code, -32602);
+  assert.equal((await handle({ jsonrpc: "2.0", id: 6, method: "resources/list" })).error.code, -32601);
+  assert.equal(await handle({ jsonrpc: "2.0", method: "notifications/initialized" }), null);
+  assert.equal((await handle({ jsonrpc: "2.0", id: 7, method: "ping" })).result && true, true);
+  assert.equal((await handle({ id: 8 })).error.code, -32600);
+});
+
+test("the stdio server answers line by line and exits when input closes", async () => {
+  const child = spawn(process.execPath, [new URL("../bin/pump-fun-mcp.js", import.meta.url).pathname]);
+  let out = "";
+  child.stdout.on("data", (d) => (out += d));
+  child.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18" } }) + "\n");
+  child.stdin.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\n");
+  child.stdin.write("{not json\n");
+  child.stdin.end(JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list" }) + "\n");
+  const code = await new Promise((r) => child.on("close", r));
+  const lines = out.trim().split("\n").map((l) => JSON.parse(l));
+  assert.equal(code, 0);
+  assert.equal(lines.length, 3);
+  assert.equal(lines.find((l) => l.id === 1).result.serverInfo.name, "pump-fun-mcp");
+  assert.equal(lines.find((l) => l.error)?.error.code, -32700);
+  assert.equal(lines.find((l) => l.id === 2).result.tools.length, 6);
+});

@@ -1,0 +1,13 @@
+{
+  "name": "pump-fun-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Solana memecoin and pump.fun research: token info, rug checks, top holders, screener, whale and wallet trades for Claude, Cursor and other AI assistants.",
+  "type": "module",
+  "bin": { "pump-fun-mcp": "bin/pump-fun-mcp.js" },
+  "scripts": { "start": "node bin/pump-fun-mcp.js", "test": "node --test" },
+  "engines": { "node": ">=22" },
+  "keywords": ["mcp", "mcp-server", "model-context-protocol", "pump-fun", "solana", "memecoin", "claude", "cursor", "ai-agent", "crypto-mcp"],
+  "homepage": "https://blixvip.com/pump-fun-mcp",
+  "repository": { "type": "git", "url": "git+https://github.com/blixtrade/pump-fun-mcp.git" },
+  "license": "MIT"
+}
