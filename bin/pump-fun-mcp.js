@@ -20,6 +20,10 @@ const send = (obj) => process.stdout.write(JSON.stringify(obj) + "\n");
 const rl = createInterface({ input: process.stdin, crlfDelay: Infinity });
 let pending = 0;
 let closing = false;
+// Exit only after stdout has flushed. On macOS pipe writes are async, so exiting straight
+// after the last write could cut off a long reply. The write callback runs once every
+// earlier write has been handed to the OS.
+const finish = () => process.stdout.write("", () => process.exit(0));
 
 rl.on("line", async (line) => {
   if (!line.trim()) return;
@@ -36,7 +40,7 @@ rl.on("line", async (line) => {
     if (msg?.id !== undefined) send({ jsonrpc: "2.0", id: msg.id, error: { code: -32603, message: "Internal error" } });
   } finally {
     pending--;
-    if (closing && !pending) process.exit(0);
+    if (closing && !pending) finish();
   }
 });
-rl.on("close", () => { closing = true; if (!pending) process.exit(0); });
+rl.on("close", () => { closing = true; if (!pending) finish(); });
