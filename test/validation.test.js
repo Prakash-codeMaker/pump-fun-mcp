@@ -74,6 +74,10 @@ test("rejects the issue's malformed tool arguments using real schemas", () => {
     /Invalid argument "maxAgeMinutes": expected number/,
   );
   assert.throws(
+    () => validateInput(schemaFor("screen_tokens"), { limit: 0 }),
+    /Invalid argument "limit": must be at least 1/,
+  );
+  assert.throws(
     () => validateInput(schemaFor("screen_tokens"), { sort: "unknown" }),
     /Invalid argument "sort": expected one of/,
   );
