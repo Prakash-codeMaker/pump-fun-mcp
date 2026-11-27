@@ -103,6 +103,7 @@ Add it to your MCP client, for example Claude Code:
 
 Tools: token_info, rug_check, top_holders, screen_tokens, whale_trades, wallet_trades
 Environment: SOLANA_RPC_URL (optional, faster wallet_trades)
+Options: --help, -h (help); --version, -v (print version)
 ```
 
 ## How it works
