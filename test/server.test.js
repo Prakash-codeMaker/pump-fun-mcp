@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { handle } from "../lib/server.js";
 
@@ -73,4 +74,25 @@ test("null params and non-object arguments on tools/call are invalid params, not
 
   const badName = await handle({ jsonrpc: "2.0", id: 15, method: "tools/call", params: { name: 42 } });
   assert.equal(badName.error.code, -32602);
+});
+
+const packageVersion = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+).version;
+
+test("server metadata uses the package.json version", async () => {
+  const r = await handle({ jsonrpc: "2.0", id: 20, method: "initialize", params: { protocolVersion: "2025-06-18" } });
+  assert.equal(r.result.serverInfo.version, packageVersion);
+});
+
+test("the CLI prints its version and exits before starting the stdio server", () => {
+  const bin = fileURLToPath(new URL("../bin/pump-fun-mcp.js", import.meta.url));
+  const result = spawnSync(process.execPath, [bin, "--version"], {
+    encoding: "utf8",
+    timeout: 3000,
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout.trim(), packageVersion);
+  assert.equal(result.stderr, "");
 });
