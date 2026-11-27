@@ -87,12 +87,15 @@ test("server metadata uses the package.json version", async () => {
 
 test("the CLI prints its version and exits before starting the stdio server", () => {
   const bin = fileURLToPath(new URL("../bin/pump-fun-mcp.js", import.meta.url));
-  const result = spawnSync(process.execPath, [bin, "--version"], {
-    encoding: "utf8",
-    timeout: 3000,
-  });
 
-  assert.equal(result.status, 0, result.stderr);
-  assert.equal(result.stdout.trim(), packageVersion);
-  assert.equal(result.stderr, "");
+  for (const flag of ["--version", "-v"]) {
+    const result = spawnSync(process.execPath, [bin, flag], {
+      encoding: "utf8",
+      timeout: 3000,
+    });
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout.trim(), packageVersion);
+    assert.equal(result.stderr, "");
+  }
 });
